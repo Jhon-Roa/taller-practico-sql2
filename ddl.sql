@@ -55,7 +55,7 @@ CREATE TABLE customers (
     id_customer VARCHAR(50),
     id_document_type INT(),
     email VARCHAR(100) UNIQUE NOT NULL,
-    phone_number INT(15) NOT NULL,
+    phone_number VARCHAR(15) NOT NULL,
     id_city INT NOT NULL,
     CONSTRAINT pk_id_customer PRIMARY KEY (id_customer),
     CONSTRAINT fk_id_document_type_customer FOREIGN KEY (id_document_type)
