@@ -116,6 +116,7 @@ CREATE TABLE customers (
     REFERENCES cities(id_city)
 );
 
+<<<<<<< HEAD
 CREATE TABLE sales (
     id_sale INT AUTO_INCREMENT,
     date DATE DEFAULT (CURDATE()),
@@ -261,5 +262,12 @@ BEGIN
     UPDATE purchases 
     SET total = unit_price_t * NEW.quantity
     WHERE id_purchase = NEW.id_purchase;
+END $$
+DELIMITER ;
+DELIMITER $$
+CREATE PROCEDURE add_bike (IN id_model_nb INT, IN price_nb DECIMAL(10,2), IN stock_nb INT, OUT NULL)
+BEGIN
+    INSERT INTO bikes (id_model, price, stock)
+    VALUES (id_model_nb, precio_nb, stock_nb);
 END $$
 DELIMITER ;

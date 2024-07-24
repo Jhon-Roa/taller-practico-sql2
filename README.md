@@ -11,7 +11,7 @@ ya no están disponibles.
 
 #### Agregar nueva bicicleta
 
-```
+```sql
 DELIMITER //
 CREATE PROCEDURE add_bike (IN id_model_nb INT, IN price_nb DECIMAL(10,2), IN stock_nb INT, OUT NULL)
 BEGIN
@@ -23,7 +23,9 @@ DELIMITER ;
 
 #### Actualizar bicicleta
 
-```
+```sql
+DELIMITER //
+CREATE PROCEDURE update_bike (IN id_bike)
 UPDATE bikes SET price = newPrice, stock = newStock
 WHERE id_bike = idACambiar,
 SELECT "Ha sido actualizada la bici";
@@ -31,6 +33,10 @@ SELECT "Ha sido actualizada la bici";
 
 #### Eliminar bicicleta
 
+```sql
+
 ```
+
+```sql
 
 ```
