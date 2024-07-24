@@ -31,16 +31,25 @@ CREATE TABLE models (
     id_brand INT NOT NULL,
     CONSTRAINT pk_id_model PRIMARY KEY (id_model),
     CONSTRAINT fk_id_brand_model FOREIGN KEY (id_brand)
-    REFERENCES brands(id_brand) ON DELETE CASCADE
+    REFERENCES brands(id_brand) ON DELETE CASCADE 
+);
+
+CREATE TABLE document_types (
+    id_document_type INT AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL,
+    CONSTRAINT pk_id_document_type PRIMARY KEY (id_document_type) 
 );
 
 CREATE TABLE contacts (
     id_contact VARCHAR(50),
+    id_document_type INT,
     first_name VARCHAR(20) NOT NULL,
     middle_name VARCHAR(20),
     last_name VARCHAR(20) NOT NULL,
     second_last_name VARCHAR(20),
-    CONSTRAINT pk_id_contact PRIMARY KEY (id_contact)
+    CONSTRAINT pk_id_contact PRIMARY KEY (id_contact),
+    CONSTRAINT fk_id_document_type_contact FOREIGN KEY (id_document_type)
+    REFERENCES document_types(id_document_type)
 );
 
 CREATE TABLE suppliers (
@@ -75,28 +84,25 @@ CREATE TABLE supplier_model (
 
 CREATE TABLE suppliers_phone (
     id_suppliers_phone INT AUTO_INCREMENT,
-    phone_number INT(15),
+    phone_number VARCHAR(15),
+    id_supplier VARCHAR(50),
     id_phone_type INT NOT NULL,
     CONSTRAINT pk_id_suppliers_phone PRIMARY KEY (id_suppliers_phone),
     CONSTRAINT fk_id_phone_type_suppliers_phone FOREIGN KEY (id_phone_type)
-    REFERENCES phone_types(id_phone_type)
+    REFERENCES phone_types(id_phone_type),
+    CONSTRAINT fk_id_supplier_phone_supplier FOREIGN KEY (id_supplier)
+    REFERENCES supplier(id_supplier)
 );
 
 CREATE TABLE bikes (
     id_bike INT AUTO_INCREMENT,
-    id_supplier_model INT,
+    id_supplier_model INT UNIQUE,
     price DECIMAL(10,2) UNSIGNED  NOT NULL,
     stock INT UNSIGNED DEFAULT 0,
     CHECK (price > 0.00),
     CONSTRAINT pk_id_bike PRIMARY KEY (id_bike),
     CONSTRAINT fk_id_supplier_model_bikes FOREIGN KEY (id_supplier_model)
     REFERENCES supplier_model(id_supplier_model)
-);
-
-CREATE TABLE document_types (
-    id_document_type INT AUTO_INCREMENT,
-    name VARCHAR(50) NOT NULL,
-    CONSTRAINT pk_id_document_type PRIMARY KEY (id_document_type) 
 );
 
 CREATE TABLE customers (
@@ -131,7 +137,6 @@ CREATE TABLE sale_details (
     id_sale INT NOT NULL,
     id_bike INT NOT NULL,
     quantity INT UNSIGNED DEFAULT 1,
-    unit_price DECIMAL(10,2),
     CHECK (quantity > 0),
     CONSTRAINT pk_id_sale_details PRIMARY KEY (id_sale_details),
     CONSTRAINT fk_id_sale_sale_details FOREIGN KEY (id_sale)
@@ -167,7 +172,6 @@ CREATE TABLE purchase_details (
     id_purchase INT NOT NULL,
     id_spare INT NOT NULL,
     quantity INT UNSIGNED DEFAULT 1,
-    unit_price DECIMAL(10,2),
     CHECK (quantity > 0),
     CONSTRAINT pk_id_purchase_details PRIMARY KEY (id_purchase_details),
     CONSTRAINT fk_id_purchase_purchase_details FOREIGN KEY (id_purchase)
@@ -177,6 +181,7 @@ CREATE TABLE purchase_details (
 );
 
 DELIMITER $$
+-- triggers
 CREATE TRIGGER after_delete_city
 AFTER DELETE ON cities
 FOR EACH ROW
@@ -209,10 +214,6 @@ BEGIN
     UPDATE bikes
     SET stock = available_stock - NEW.quantity
     WHERE id_bike = NEW.id_bike;
-
-    UPDATE sale_details
-    SET unit_price = unit_price_t
-    WHERE id_sale_details = NEW.id_sale_details;
 
     UPDATE sales 
     SET total = unit_price_t * NEW.quantity
@@ -254,12 +255,47 @@ BEGIN
     SET stock = available_stock - NEW.quantity
     WHERE id_spare = NEW.id_spare;
 
-    UPDATE purchase_details
-    SET unit_price = unit_price_t
-    WHERE id_purchase_details = NEW.id_purchase_details;
-
     UPDATE purchases 
     SET total = unit_price_t * NEW.quantity
     WHERE id_purchase = NEW.id_purchase;
 END $$
+
+-- Procedures for use cases
+-- case 1
+CREATE PROCEDURE add_bike (IN id_model_nb INT, IN price_nb DECIMAL(10,2), IN stock_nb INT, OUT NULL)
+BEGIN
+    INSERT INTO bikes (id_supplier_model, price, stock)
+    VALUES (id_model_nb, precio_nb, stock_nb);
+END $$
+
+CREATE PROCEDURE update_bike (IN id_bike_to_change INT, IN newPrice DECIMAL(10,2), IN newStock INT)
+BEGIN
+    UPDATE bikes
+    SET price = newPrice, stock = newStock
+    WHERE id_bike = id_bike_to_change,
+    SELECT "Ha sido actualizada la bici";
+END $$
+
+CREATE PROCEDURE delete_bike (IN id_bike_to_delete INT)
+BEGIN
+    DELETE bike WHERE id_bike = id_bike_to_delete;
+END $$
+
+-- case 2
+CREATE PROCEDURE sale_register(IN id_customer_ns, OUT id_sale_out INT)
+BEGIN 
+    INSERT INTO sales(id_customer)
+    VALUES (id_customer_ns);
+
+    SELECT LAST_INSERT_ID() INTO id_sale_out;
+END $$
+
+CREATE PROCEDURE sale_details_register(IN id_sale_nsd INT, IN id_bike_nsd INT, IN quantity_nsd INT)
+BEGIN
+    INSERT INTO sale_details(id_sale, id_bike, quantity)
+    VALUES (id_sale_nsd, id_bike_nsd, quantity_nsd)
+END $$
+
+-- case 3
+
 DELIMITER ;
