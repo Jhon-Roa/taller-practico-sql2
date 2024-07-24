@@ -12,8 +12,13 @@ ya no están disponibles.
 #### Agregar nueva bicicleta
 
 ```
-INSERT INTO bikes (id_model, price, stock)
-VALUES (id_model, precio, stock);
+DELIMITER //
+CREATE PROCEDURE add_bike (IN id_model_nb INT, IN price_nb DECIMAL(10,2), IN stock_nb INT, OUT NULL)
+BEGIN
+    INSERT INTO bikes (id_model, price, stock)
+    VALUES (id_model_nb, precio_nb, stock_nb);
+END //
+DELIMITER ;
 ```
 
 #### Actualizar bicicleta
