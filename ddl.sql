@@ -140,6 +140,42 @@ CREATE TABLE sale_details (
     REFERENCES bikes(id_bike)
 );
 
+CREATE TABLE spares (
+    id_spare INT AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL,
+    description VARCHAR(200),
+    price DECIMAL(10,2) UNSIGNED  NOT NULL,
+    stock INT UNSIGNED DEFAULT 0,
+    id_supplier VARCHAR(50) NOT NULL,
+    CONSTRAINT pk_id_spare PRIMARY KEY (id_spare),
+    CONSTRAINT fk_id_supplier_spare FOREIGN KEY (id_supplier)
+    REFERENCES suppliers(id_supplier)
+);
+
+CREATE TABLE purchases (
+    id_purchase INT AUTO_INCREMENT,
+    date DATE DEFAULT (CURDATE()),
+    id_supplier VARCHAR(50) NOT NULL,
+    total DECIMAL(10,2) DEFAULT 0,
+    CONSTRAINT pk_id_purchase PRIMARY KEY (id_purchase),
+    CONSTRAINT fk_id_supplier_purchase FOREIGN KEY (id_supplier)
+    REFERENCES suppliers(id_supplier)
+);
+
+CREATE TABLE purchase_details (
+    id_purchase_details INT AUTO_INCREMENT,
+    id_purchase INT NOT NULL,
+    id_spare INT NOT NULL,
+    quantity INT UNSIGNED DEFAULT 1,
+    unit_price DECIMAL(10,2),
+    CHECK (quantity > 0),
+    CONSTRAINT pk_id_purchase_details PRIMARY KEY (id_purchase_details),
+    CONSTRAINT fk_id_purchase_purchase_details FOREIGN KEY (id_purchase)
+    REFERENCES purchases(id_purchase) ON DELETE CASCADE,
+    CONSTRAINT fk_id_spare_purchase_details FOREIGN KEY (id_spare)
+    REFERENCES spares(id_spare)
+);
+
 DELIMITER $$
 CREATE TRIGGER after_delete_city
 AFTER DELETE ON cities
@@ -170,6 +206,10 @@ BEGIN
         SET MESSAGE_TEXT = 'Not enough stock available for the requested quantity';
     END IF; 
 
+    UPDATE bikes
+    SET stock = available_stock - NEW.quantity
+    WHERE id_bike = NEW.id_bike;
+
     UPDATE sale_details
     SET unit_price = unit_price_t
     WHERE id_sale_details = NEW.id_sale_details;
@@ -179,4 +219,47 @@ BEGIN
     WHERE id_sale = NEW.id_sale;
 END $$
 
+CREATE TRIGGER after_insert_purchase_details
+AFTER INSERT ON purchase_details
+FOR EACH ROW 
+BEGIN 
+    DECLARE available_stock INT;
+    DECLARE unit_price_t DECIMAL(10,2);
+    DECLARE id_supplier_spare INT;
+    DECLARE id_supplier_purchase INT;
+
+    SELECT stock, price INTO available_stock, unit_price_t
+    FROM spares
+    WHERE id_spare = NEW.id_spare;
+
+    SELECT id_supplier INTO id_supplier_spare
+    FROM spares
+    WHERE id_spare = NEW.id_spare;
+
+    SELECT id_supplier INTO id_supplier_purchase
+    FROM purchases
+    WHERE id_purchase = NEW.id_purchase;
+
+    IF available_stock < NEW.quantity THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Not enough stock available for the requested quantity';
+    END IF;
+
+    IF id_supplier_spare != id_supplier_purchase THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'The supplier for the spare and purchase does not match';
+    END IF; 
+
+    UPDATE spares
+    SET stock = available_stock - NEW.quantity
+    WHERE id_spare = NEW.id_spare;
+
+    UPDATE purchase_details
+    SET unit_price = unit_price_t
+    WHERE id_purchase_details = NEW.id_purchase_details;
+
+    UPDATE purchases 
+    SET total = unit_price_t * NEW.quantity
+    WHERE id_purchase = NEW.id_purchase;
+END $$
 DELIMITER ;
