@@ -91,7 +91,7 @@ CREATE TABLE suppliers_phone (
     CONSTRAINT fk_id_phone_type_suppliers_phone FOREIGN KEY (id_phone_type)
     REFERENCES phone_types(id_phone_type),
     CONSTRAINT fk_id_supplier_phone_supplier FOREIGN KEY (id_supplier)
-    REFERENCES supplier(id_supplier)
+    REFERENCES suppliers(id_supplier)
 );
 
 CREATE TABLE bikes (
@@ -151,7 +151,7 @@ CREATE TABLE spares (
     description VARCHAR(200),
     price DECIMAL(10,2) UNSIGNED  NOT NULL,
     stock INT UNSIGNED DEFAULT 0,
-    id_supplier VARCHAR(50) NOT NULL,
+    id_supplier VARCHAR(50),
     CONSTRAINT pk_id_spare PRIMARY KEY (id_spare),
     CONSTRAINT fk_id_supplier_spare FOREIGN KEY (id_supplier)
     REFERENCES suppliers(id_supplier)
@@ -193,6 +193,15 @@ BEGIN
     UPDATE customers 
     SET id_city = NULL
     WHERE id_city = OLD.id_city;
+END $$
+
+CREATE TRIGGER after_delete_supplier
+AFTER DELETE ON suppliers
+FOR EACH ROW
+BEGIN
+    UPDATE spares
+    SET id_supplier = NULL
+    WHERE id_supplier = OLD.id_supplier;
 END $$
 
 CREATE TRIGGER after_insert_sale_details
@@ -262,7 +271,7 @@ END $$
 
 -- Procedures for use cases
 -- case 1
-CREATE PROCEDURE add_bike (IN id_model_nb INT, IN price_nb DECIMAL(10,2), IN stock_nb INT, OUT NULL)
+CREATE PROCEDURE add_bike (IN id_model_nb INT, IN price_nb DECIMAL(10,2), IN stock_nb INT)
 BEGIN
     INSERT INTO bikes (id_supplier_model, price, stock)
     VALUES (id_model_nb, precio_nb, stock_nb);
@@ -272,17 +281,19 @@ CREATE PROCEDURE update_bike (IN id_bike_to_change INT, IN newPrice DECIMAL(10,2
 BEGIN
     UPDATE bikes
     SET price = newPrice, stock = newStock
-    WHERE id_bike = id_bike_to_change,
+    WHERE id_bike = id_bike_to_change;
+
     SELECT "Ha sido actualizada la bici";
 END $$
 
 CREATE PROCEDURE delete_bike (IN id_bike_to_delete INT)
 BEGIN
-    DELETE bike WHERE id_bike = id_bike_to_delete;
+    DELETE FROM bike 
+    WHERE id_bike = id_bike_to_delete;
 END $$
 
 -- case 2
-CREATE PROCEDURE sale_register(IN id_customer_ns, OUT id_sale_out INT)
+CREATE PROCEDURE sale_register(IN id_customer_ns INT, OUT id_sale_out INT)
 BEGIN 
     INSERT INTO sales(id_customer)
     VALUES (id_customer_ns);
@@ -293,9 +304,90 @@ END $$
 CREATE PROCEDURE sale_details_register(IN id_sale_nsd INT, IN id_bike_nsd INT, IN quantity_nsd INT)
 BEGIN
     INSERT INTO sale_details(id_sale, id_bike, quantity)
-    VALUES (id_sale_nsd, id_bike_nsd, quantity_nsd)
+    VALUES (id_sale_nsd, id_bike_nsd, quantity_nsd);
 END $$
 
 -- case 3
+CREATE PROCEDURE add_supplier(IN name_ns VARCHAR(50), IN id_contact_ns INT, IN phone_ns VARCHAR(15), IN phone_type_ns INT, IN email_ns VARCHAR(100), IN id_city_ns INT, OUT id_supplier_out VARCHAR(50) )
+BEGIN
+    INSERT INTO suppliers(name, id_contact, email, id_city)
+    VALUES (name_ns, id_contact_ns, email_ns, id_city_ns);
 
+    SELECT LAST_INSERT_ID() INTO id_supplier_out;
+
+    INSERT INTO suppliers_phone(phone_number, id_supplier, id_phone_type )
+    VALUES (phone_ns, LAST_INSERT_ID(), phone_type_ns );
+END $$
+
+CREATE PROCEDURE add_spare(IN name_ns VARCHAR(50), IN description_ns VARCHAR(200), IN price_ns DECIMAL(10,2), IN stock_ns INT, IN id_supplier_ns VARCHAR(50), OUT id_spare_out INT )
+BEGIN 
+    INSERT INTO spares(name, description, price, stock, id_supplier)
+    VALUES (name_ns, description_ns, price_ns, stock_ns, id_supplier_ns);
+
+
+    SELECT LAST_INSERT_ID() INTO id_spare_out;
+END $$
+
+CREATE PROCEDURE update_supplier(IN id_supplier_ns VARCHAR(50), IN name_ns VARCHAR(50), IN id_contact_ns INT, IN email_ns VARCHAR(100), IN id_city_ns INT)
+BEGIN
+    UPDATE supplier
+    SET name = name_ns, id_contact = id_contact_ns, email = email_ns, id_city = id_city_ns
+    WHERE id_supplier = id_supplier_ns;
+END $$
+
+CREATE PROCEDURE update_spare(IN id_spare_ns INT, IN name_ns VARCHAR(50), IN description_ns VARCHAR(200), IN price_ns DECIMAL(10,2), IN stock_ns INT)
+BEGIN
+    UPDATE spares
+    SET name = name_ns, description = description_ns, price = price_ns, stock = stock_ns
+    WHERE id_supplier = id_spare_ns;
+END $$
+
+CREATE PROCEDURE delete_supplier (IN id_supplier_ns INT)
+BEGIN
+    DELETE FROM suppliers
+    WHERE id_supplier = id_supplier_ns;
+END $$
+
+CREATE PROCEDURE delete_spare (IN id_spare_ns INT)
+BEGIN
+    DELETE FROM spares
+    WHERE id_spare = id_spare_ns;
+END $$
+
+-- case 4
+CREATE PROCEDURE show_sales(IN id_customer_ns VARCHAR(50))
+BEGIN
+    SELECT id_sale, date, total
+    FROM sales 
+    WHERE id_customer = id_customer_ns
+    ORDER BY id_sale;
+END $$
+
+CREATE PROCEDURE show_sale_details(IN id_sale_ns INT, IN id_customer_ns VARCHAR(50))
+BEGIN
+    DECLARE row_count INT DEFAULT 0;
+
+    CREATE TEMPORARY TABLE temp_sale_details AS
+    SELECT sd.id_sale_details,
+           sd.id_sale,
+           b.name,
+           b.price,
+           sd.quantity
+    FROM sale_details AS sd
+    JOIN bike AS b USING(id_bike)
+    JOIN sales AS s USING(id_sale)
+    WHERE sd.id_sale = id_sale_ns
+    AND s.id_customer = id_customer_ns
+    ORDER BY sd.id_sale_details;
+
+    SELECT COUNT(*) INTO row_count FROM temp_sale_details;
+
+    IF row_count = 0 THEN
+        SELECT 'No se encontraron detalles de venta para los parámetros proporcionados.' AS message;
+    ELSE
+        SELECT * FROM temp_sale_details;
+    END IF;
+
+    DROP TEMPORARY TABLE temp_sale_details;
+END $$
 DELIMITER ;

@@ -92,11 +92,11 @@ INSERT INTO customers (id_customer, id_document_type, first_name, middle_name, l
 ('5698547', 2, 'Lobezna', 'Tatiana', 'Pimentel', NULL, 'latatiana@lob.com', '4857485', 5);
 
 INSERT INTO sales (id_customer) VALUES
-(1),
-(2),
-(1),
-(3),
-(3);
+('100548745'),
+('100548745'),
+('102045215'),
+('5698547'),
+('102045215');
 
 INSERT INTO sale_details (id_sale, id_bike, quantity) VALUES
 (1, 3, 5),
