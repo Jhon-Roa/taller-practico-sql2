@@ -293,7 +293,7 @@ BEGIN
 END $$
 
 -- case 2
-CREATE PROCEDURE sale_register(IN id_customer_ns INT, OUT id_sale_out INT)
+CREATE PROCEDURE sale_register(IN id_customer_ns VARCHAR(50), OUT id_sale_out INT)
 BEGIN 
     INSERT INTO sales(id_customer)
     VALUES (id_customer_ns);
@@ -342,7 +342,7 @@ BEGIN
     WHERE id_supplier = id_spare_ns;
 END $$
 
-CREATE PROCEDURE delete_supplier (IN id_supplier_ns INT)
+CREATE PROCEDURE delete_supplier (IN id_supplier_ns varchar(50))
 BEGIN
     DELETE FROM suppliers
     WHERE id_supplier = id_supplier_ns;
@@ -389,5 +389,20 @@ BEGIN
     END IF;
 
     DROP TEMPORARY TABLE temp_sale_details;
+END $$
+
+-- case 5
+CREATE PROCEDURE purchase_register(IN id_supplier_ns VARCHAR(50), OUT id_purchase_out INT)
+BEGIN 
+    INSERT INTO purchases(id_supplier)
+    VALUES (id_supplier_ns);
+
+    SELECT LAST_INSERT_ID() INTO id_purchase_out;
+END $$
+
+CREATE PROCEDURE purchase_details_register(IN id_purchase_nsd INT, IN id_spare_nsd INT, IN quantity_nsd INT)
+BEGIN
+    INSERT INTO purchase_details(id_purchase, id_spare, quantity)
+    VALUES (id_purchase_nsd, id_spare_nsd, quantity_nsd);
 END $$
 DELIMITER ;

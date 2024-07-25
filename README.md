@@ -33,7 +33,7 @@ Este caso de uso describe el proceso de registro de una venta de bicicletas, inc
 
 ```sql
 SET @id_sale = 0;
-CALL sale_register(1, @id_sale);
+CALL sale_register('100548745', @id_sale);
 ```
 
 #### Añadir sale details
@@ -100,4 +100,34 @@ CALL show_sales(@id_customer);
 
 ```sql
 CALL show_table_details(1, @id_customer);
+```
+
+## Caso de Uso 5: Gestión de Compras de Repuestos
+
+Este caso de uso describe cómo el sistema gestiona las compras de repuestos a
+proveedores, permitiendo registrar una nueva compra, especificar los repuestos comprados y actualizar el stock de repuestos.
+
+#### Registrar una compra
+
+```sql
+SET @id_purchase = 0;
+CALL purchase_register('BMC45485', @id_purchase)
+```
+
+#### Registrar detalles de una compra
+
+```sql
+CALL purchase_detail_register (@id_purchase, 2, 1);
+CALL purchase_detail_register (@id_purchase, 1, 1);
+```
+# Casos de Uso con Subconsultas
+
+## Caso de Uso 6: Consulta de Bicicletas Más Vendidas por Marca
+
+Este caso de uso describe cómo el sistema permite a un usuario consultar las
+bicicletas más vendidas por cada marca.
+
+```sql
+SELECT 
+FROM (SELECT b.id_suppier_model, SUM(sd.sell_number) FROM)
 ```
