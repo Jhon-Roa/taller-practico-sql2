@@ -80,7 +80,7 @@ CREATE TABLE supplier_model (
     REFERENCES suppliers(id_supplier),
     CONSTRAINT fk_id_model_supplier_model FOREIGN KEY (id_model)
     REFERENCES models(id_model) 
-);
+); 
 
 CREATE TABLE suppliers_phone (
     id_suppliers_phone INT AUTO_INCREMENT,
@@ -140,7 +140,7 @@ CREATE TABLE sale_details (
     CHECK (quantity > 0),
     CONSTRAINT pk_id_sale_details PRIMARY KEY (id_sale_details),
     CONSTRAINT fk_id_sale_sale_details FOREIGN KEY (id_sale)
-    REFERENCES sales(id_sale) ON DELETE CASCADE, 
+    REFERENCES sales(id_sale) ON DELETE CASCADE,
     CONSTRAINT fk_id_bike_sale_details FOREIGN KEY (id_bike)
     REFERENCES bikes(id_bike)
 );
