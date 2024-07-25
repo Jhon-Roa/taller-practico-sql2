@@ -103,3 +103,20 @@ INSERT INTO sale_details (id_sale, id_bike, quantity) VALUES
 (1, 1, 2),
 (1, 5, 3),
 (1, 9, 12);
+
+INSERT INTO spares (name, description, price, stock, id_supplier) VALUES
+('7 cambios shimano', 'lorem lorem lorem lorem', 124.30, 12, 2),
+('Discos 17-32', 'lorem lorem lorem lorem', 69.00, 8, 1),
+('Llantas montañera', 'Lorem lorem lorem', 45.84, 9, 3);
+
+INSERT INTO purchases (id_supplier, total) VALUES
+(2, 12400.00),
+(1, 8000.34),
+(1, 250.60),
+(1, 1532.00),
+(2, 3201.45);
+
+INSERT INTO purchase_details (id_purchase, id_spare, quantity) VALUES
+(1, 2, 4),
+(1, 3, 7),
+(2,1,4);
