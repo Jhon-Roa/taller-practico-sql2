@@ -180,6 +180,20 @@ CREATE TABLE purchase_details (
     REFERENCES spares(id_spare)
 );
 
+CREATE TABLE refunds (
+    id_refund INT AUTO_INCREMENT,
+    id_customer VARCHAR(50) NOT NULL,
+    id_bike INT,
+    id_sale INT,
+    CONSTRAINT pk_id_refund PRIMARY KEY (id_refund),
+    CONSTRAINT fk_id_customer_refunds FOREIGN KEY (id_customer)
+    REFERENCES customers(id_customer),
+    CONSTRAINT fk_id_bike_refunds FOREIGN KEY (id_bike) 
+    REFERENCES bikes(id_bike),
+    CONSTRAINT fk_id_sale_refunds FOREIGN KEY (id_sale)
+    REFERENCES sales(id_sale)
+);
+
 DELIMITER $$
 -- triggers
 CREATE TRIGGER after_delete_city
@@ -267,6 +281,16 @@ BEGIN
     UPDATE purchases 
     SET total = unit_price_t * NEW.quantity
     WHERE id_purchase = NEW.id_purchase;
+END $$
+
+CREATE TRIGGER before_insert_refunds
+BEFORE INSERT ON refunds
+FOR EACH ROW
+BEGIN
+    IF NEW.id_bike NOT IN (SELECT sd.id_bike FROM sale_details AS sd JOIN sales AS s USING(id_sale) WHERE s.id_sale = NEW.id_sale AND s.id_customer = NEW.id_customer) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'bike is not available on this purchase';
+    END IF;
 END $$
 
 -- Procedures for use cases

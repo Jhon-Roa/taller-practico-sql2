@@ -127,17 +127,37 @@ CALL purchase_detail_register (@id_purchase, 1, 1);
 Este caso de uso describe cómo el sistema permite a un usuario consultar las bicicletas más vendidas por cada marca.
 
 ```sql
-SELECT b.name, 
-  (SELECT m.name 
-  FROM models m 
-  WHERE m.id_brand = b.id_brand) AS model_name,
-  (SELECT SUM(sd.quantity)
-  FROM models m
-  JOIN supplier_model sm ON m.id_model = sm.id_model
-  JOIN bikes bk ON sm.id_supplier_model = bk.id_supplier_model
-  JOIN sales_details sd ON bk.id_bike = sd.id_bike
-  WHERE m.id_brand = b.id_brand) AS total_quantity
-FROM brands b;
+SELECT marca, modelo
+FROM (
+    SELECT 
+        (SELECT name FROM brands WHERE id_brand = m.id_brand) AS marca,
+        m.name AS modelo,
+        SUM(sd.quantity) AS total_ventas
+    FROM models AS m
+    JOIN supplier_model AS sm USING (id_model)
+    JOIN bikes AS b USING (id_supplier_model)
+    JOIN sale_details AS sd USING (id_bike)
+    GROUP BY 
+        (SELECT name FROM brands WHERE id_brand = m.id_brand),
+        m.name
+) AS ventas_por_modelo
+WHERE total_ventas = (
+    SELECT MAX(subconsulta.total_ventas)
+    FROM (
+        SELECT 
+            (SELECT name FROM brands WHERE id_brand = m_sub.id_brand) AS marca,
+            m_sub.name AS modelo,
+            SUM(sd_sub.quantity) AS total_ventas
+        FROM models AS m_sub
+        JOIN supplier_model AS sm_sub USING (id_model)
+        JOIN bikes AS b_sub USING (id_supplier_model)
+        JOIN sale_details AS sd_sub USING (id_bike)
+        GROUP BY 
+            (SELECT name FROM brands WHERE id_brand = m_sub.id_brand),
+            m_sub.name
+    ) AS subconsulta
+    WHERE subconsulta.marca = ventas_por_modelo.marca
+);
 ```
 
 ## Caso de Uso 7: Clientes con Mayor Gasto en un Año Específico
@@ -153,7 +173,7 @@ FROM (
   FROM sales s
   WHERE s.id_customer = c.id_customer
   AND YEAR(s.date) = 2024) AS total_gastado
-  FROM customers c
+  FROM customers AS c
 ) subquery
 WHERE total_gastado IS NOT NULL
 ORDER BY total_gastado DESC;
@@ -251,7 +271,7 @@ SELECT s.id_supplier, s.name AS proveedor, SUM(pd.quantity) AS repuestos_comprad
 FROM suppliers AS s
 JOIN purchases AS p USING(id_supplier)
 JOIN purchase_details AS pd USING(id_purchase)
-GROUP BY s.id_supplier, proveedor
+GROUP BY s.id_supplier, s.name
 ORDER BY repuestos_comprados DESC
 ```
 
@@ -324,7 +344,40 @@ CALL purchase_detail_register (@id_purchase, 1, 1);
 Este caso de uso describe cómo el sistema genera un reporte de ventas para un cliente específico, mostrando todas las ventas realizadas por el cliente y los detalles de cada venta.
 
 ```sql
+DELIMITER $$
+CREATE PROCEDURE see_customer_sales(IN id_customer_in VARCHAR(50))
+BEGIN
+    DECLARE customer_exists INT;
+    
+    SELECT COUNT(*) INTO customer_exists 
+    FROM customers 
+    WHERE id_customer = id_customer_in;
+    
+    IF customer_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cliente no encontrado';
+    ELSE
+        SELECT 
+            s.id_sale, 
+            s.date AS sale_date,
+            m.name AS bike_model, 
+            b.price AS unit_price,
+            sd.quantity, 
+            (sd.quantity * b.price) AS subtotal,
+            s.total AS total_sale
+        FROM sales AS s
+        JOIN customers AS c USING(id_customer)
+        JOIN sale_details AS sd USING (id_sale)
+        JOIN bikes AS b USING (id_bike)
+        JOIN supplier_model USING (id_supplier_model)
+        JOIN models AS m USING (id_model)
+        WHERE c.id_customer = id_customer_in
+        ORDER BY s.id_sale, m.name;
+    END IF;
+END $$
+DELIMITER ;
 
+CALL see_customer_details('100548745');
 ```
 
 ## Caso de Uso 4: Registro de Compra de Repuestos
@@ -332,6 +385,26 @@ Este caso de uso describe cómo el sistema genera un reporte de ventas para un c
 Este caso de uso describe cómo el sistema registra una nueva compra de repuestos a un proveedor.
 
 ```sql
+DELIMITER $$
+CREATE PROCEDURE IF NOT EXISTS purchase_register(IN id_supplier_ns VARCHAR(50), OUT id_purchase_out INT)
+BEGIN 
+    INSERT INTO purchases(id_supplier)
+    VALUES (id_supplier_ns);
+
+    SELECT LAST_INSERT_ID() INTO id_purchase_out;
+END $$
+
+CREATE PROCEDURE IF NOT EXISTS purchase_details_register(IN id_purchase_nsd INT, IN id_spare_nsd INT, IN quantity_nsd INT)
+BEGIN
+    INSERT INTO purchase_details(id_purchase, id_spare, quantity)
+    VALUES (id_purchase_nsd, id_spare_nsd, quantity_nsd);
+END $$
+DELIMITER ;
+
+SET @id_purchase = 0;
+CALL purchase_register('BMC45485', @id_purchase)
+CALL purchase_detail_register (@id_purchase, 2, 1);
+CALL purchase_detail_register (@id_purchase, 1, 1);
 ```
 
 ## Caso de Uso 5: Generación de Reporte de Inventario
@@ -339,6 +412,36 @@ Este caso de uso describe cómo el sistema registra una nueva compra de repuesto
 Este caso de uso describe cómo el sistema genera un reporte de inventario de bicicletas y repuestos.
 
 ```sql
+DELIMITER $$
+DELIMITER $$
+CREATE PROCEDURE bike_spare_report()
+BEGIN
+    SELECT 'Reporte de Inventario de Bicicletas' AS report_type;
+    SELECT 
+        b.id_bike AS 'ID Bicicleta',
+        m.name AS Modelo,
+        br.name AS Marca,
+        b.price AS Precio,
+        IF (stock = 0, 'sin stock', stock) AS stock
+    FROM bikes AS b
+    JOIN supplier_model AS sm USING (id_supplier_model)
+    JOIN models AS m USING (id_model)
+    JOIN brands AS br USING (id_brand)
+    ORDER BY br.name, m.name;
+
+    SELECT 'Reporte de Inventario de Repuestos' AS report_type;
+    SELECT 
+        s.id_spare AS 'ID Repuesto',
+        s.name AS Nombre,
+        s.description AS Descripción,
+        s.price AS Precio,
+        IF (stock = 0, 'sin stock', stock) AS stock
+    FROM spares AS s
+    ORDER BY s.name;
+END $$
+DELIMITER ;
+
+CALL bike_spare_report();
 ```
 
 ## Caso de Uso 6: Actualización Masiva de Precios
@@ -346,6 +449,22 @@ Este caso de uso describe cómo el sistema genera un reporte de inventario de bi
 Este caso de uso describe cómo el sistema permite actualizar masivamente los precios de todas las bicicletas de una marca específica.
 
 ```sql
+DELIMITER $$
+CREATE PROCEDURE increase_brand_prices(IN id_brand_in INT, IN increase DECIMAL(10,2))
+BEGIN
+  UPDATE bikes 
+  SET price = price * (1 + increase/100)
+  WHERE id_supplier_model IN (
+    SELECT sm.id_supplier_model 
+    FROM suppliers_model AS sm
+    JOIN models USING(id_model)
+    JOIN brands AS b USING(id_brand)
+    WHERE b.id_brand = id_brand_in
+  );
+END $$
+
+CALL increase_brand_prices(1, 20)
+DELIMITER ;
 ```
 
 ## Caso de Uso 7: Generación de Reporte de Clientes por Ciudad
@@ -353,6 +472,16 @@ Este caso de uso describe cómo el sistema permite actualizar masivamente los pr
 Este caso de uso describe cómo el sistema genera un reporte de clientes agrupados por ciudad.
 
 ```sql
+DELIMITER $$
+CREATE PROCEDURE customers_group_by_city ()
+BEGIN 
+  SELECT c.id_city, c.name AS ciudad, COUNT(cu.id_customer)
+  FROM cities
+  JOIN customers USING(id_city)
+  GROUP BY c.id_city, c.name
+  ORDER BY c.id_city;
+END $$
+DELIMITER ;
 ```
 
 ## Caso de Uso 8: Verificación de Stock antes de Venta
@@ -360,6 +489,30 @@ Este caso de uso describe cómo el sistema genera un reporte de clientes agrupad
 Este caso de uso describe cómo el sistema verifica el stock de una bicicleta antes de permitir la venta.
 
 ```sql
+CREATE TRIGGER IF NOT EXISTS after_insert_sale_details
+AFTER INSERT ON sale_details
+FOR EACH ROW 
+BEGIN 
+    DECLARE available_stock INT;
+    DECLARE unit_price_t DECIMAL(10,2);
+
+    SELECT stock, price INTO available_stock, unit_price_t
+    FROM bikes
+    WHERE id_bike = NEW.id_bike;
+
+    IF available_stock < NEW.quantity THEN 
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Not enough stock available for the requested quantity';
+    END IF; 
+
+    UPDATE bikes
+    SET stock = available_stock - NEW.quantity
+    WHERE id_bike = NEW.id_bike;
+
+    UPDATE sales 
+    SET total = unit_price_t * NEW.quantity
+    WHERE id_sale = NEW.id_sale;
+END $$
 ```
 
 ## Caso de Uso 9: Registro de Devoluciones
@@ -367,6 +520,17 @@ Este caso de uso describe cómo el sistema verifica el stock de una bicicleta an
 Este caso de uso describe cómo el sistema registra la devolución de una bicicleta por un cliente.
 
 ```sql
+DELIMITER $$
+CREATE PROCEDURE refund_bike (IN id_bike_in INT, IN id_customer_in VARCHAR(50), IN id_sale_in INT )
+BEGIN
+  INSERT INTO refunds(id_customer, id_bike, id_sale)
+  VALUES (id_customer_in, id_bike_in, id_sale_in);
+  
+  UPDATE bikes 
+  SET stock = stock + 1
+  WHERE id_bike = id_bike_in
+END
+DELIMITER ;
 ```
 
 ## Caso de Uso 10: Generación de Reporte de Compras por Proveedor
@@ -374,6 +538,36 @@ Este caso de uso describe cómo el sistema registra la devolución de una bicicl
 Este caso de uso describe cómo el sistema genera un reporte de compras realizadas a un proveedor específico, mostrando todos los detalles de las compras.
 
 ```sql
+DELIMITER $$
+CREATE PROCEDURE see_supplier_buys(IN id_supplier_in VARCHAR(50))
+BEGIN
+    DECLARE supplier_exists INT;
+    
+    SELECT COUNT(*) INTO supplier_exists 
+    FROM supplier 
+    WHERE id_supplier = id_supplier_in;
+    
+    IF supplier_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Proveedor no encontrado';
+    ELSE
+        SELECT 
+            p.id_purchase,
+            p.date AS fecha_compra,
+            s.name AS nombre_repuesto,
+            s.price AS precio_repuesto
+            pd.quantity AS cantidad_comprada,
+            (s.price * pd.quantity) AS subtotal,
+            p.total AS total_compre
+        FROM purchases AS p
+        JOIN suppliers AS su USING(id_supplier)
+        JOIN purchase_details AS pd USING(id_purchase)
+        JOIN spares AS s USING (id_spare)
+        WHERE su.id_supplier = id_supplier_in
+        ORDER BY p.id_purchase;
+    END IF;
+END $$
+DELIMITER ;
 ```
 
 ## Caso de Uso 11: Calculadora de Descuentos en Ventas
@@ -381,6 +575,29 @@ Este caso de uso describe cómo el sistema genera un reporte de compras realizad
 Este caso de uso describe cómo el sistema aplica un descuento a una venta antes de registrar los detalles de la venta.
 
 ```sql
+DELIMITER $$
+CREATE PROCEDURE sale_discount (IN id_customer_in VARCHAR(50), IN id_bike_in INT, IN quantity_in INT, IN discount DECIMAL(10,2))
+BEGIN 
+  DECLARE last_id_sale INT;
+
+  IF quantity_in > 100 THEN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'discount cant be over 100%'
+  END IF;
+
+  
+  INSERT INTO sales(id_customer)
+  VALUES (id_customer_in);
+
+  SELECT LAST_INSERT_ID() INTO last_id_sale;
+
+  INSERT INTO sale_details(id_sale, id_bike, quantity)
+  VALUES (last_id_sale, id_bike_in, quantity_in);
+
+  UPDATE sales
+  SET total = (total * (1 - discount / 100))
+END $$
+DELIMITER ;
 ```
 
 # Casos de Uso para Funciones de Resumen
