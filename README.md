@@ -832,6 +832,22 @@ DELIMITER ;
 Este caso de uso describe cómo el sistema calcula el total de ingresos generados por cada cliente.
 
 ```sql
+DELIMITER $$
+CREATE FUNCTION calc_income_customer(id_customer_in VARCHAR(20))
+RETURNS DECIMAL(10, 2)
+READS SQL DATA
+BEGIN
+    DECLARE income_customer DECIMAL(10, 2);
+    SELECT SUM(total) INTO income_customer
+    FROM sales 
+    WHERE id_customer = id_customer_in
+    GROUP BY (id_customer);
+    
+    RETURN IFNULL(income_customer, 0);
+END $$
+DELIMITER ;
+
+SELECT calc_income_customer('100548745');
 ```
 
 ## Caso de Uso 12: Calcular el Promedio de Compras Mensuales
@@ -840,6 +856,22 @@ Este caso de uso describe cómo el sistema calcula el promedio de compras
 realizadas mensualmente por todos los clientes.
 
 ```sql
+DELIMITER $$
+CREATE FUNCTION calc_avg_buys_monthly(month_num MONTH)
+RETURNS DECIMAL(10,2)
+READS SQL DATA
+BEGIN
+    DECLARE total_income_monthly DECIMAL(10,2);
+
+    SELECT SUM(total) INTO total_income_monthly
+    FROM sales 
+    WHERE MONTH(date) = month_num;
+
+    RETURN IFNULL(total_income_monthly, 0.0);
+END $$
+DELIMITER ;
+
+SELECT calc_avg_buys_monthly(7);
 ```
 
 ## Caso de Uso 13: Calcular el Total de Ventas por Día de la Semana
@@ -848,6 +880,22 @@ Este caso de uso describe cómo el sistema calcula el total de ventas realizadas
 cada día de la semana.
 
 ```sql
+DELIMITER $$
+CREATE FUNCTION calc_sales_per_day(exact_date DATE)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE sales_per_day DECIMAL(10,2);
+    
+    SELECT SUM(total) INTO sales_per_day
+    FROM sales
+    WHERE date = exact_date;
+    
+    RETURN IFNULL(sales_per_day);
+END $$
+DELIMITER ;
+
+SELECT calc_sales_per_day(CURDATE());
 ```
 
 ## Caso de Uso 14: Contar el Número de Ventas por Categoría de Bicicleta
@@ -855,8 +903,24 @@ cada día de la semana.
 Este caso de uso describe cómo el sistema cuenta el número de ventas realizadas para cada categoría de bicicleta (por ejemplo, montaña, carretera, híbrida).
 
 ```sql
-
+DELIMITER $$
+CREATE FUNCTION sale_num_per_bike_type(id_bike_type INT)
+RETURNS INT 
+READS SQL DATA
+BEGIN
+    DECLARE sale_bike_type INT;
+    
+    SELECT COUNT(sd.id_bike) INTO sale_bike_type
+    FROM sale_details AS sd
+    WHERE
+    (
+        SELECT id_model
+    )
+END $$
+DELIMITER ;
 ```
+
+CARAJOCARAJOCARAJOCARAJOCARAJOCARAJO
 
 ## Caso de Uso 15: Calcular el Total de Ventas por Año y Mes
 
@@ -864,4 +928,12 @@ Este caso de uso describe cómo el sistema calcula el total de ventas realizadas
 mes, agrupadas por año.
 
 ```sql
+DELIMITER $$
+CREATE FUNCTION group_month_by_year()
+RETURNS NULL
+BEGIN
+END $$
+DELIMITER ;
 ```
+
+wtf
