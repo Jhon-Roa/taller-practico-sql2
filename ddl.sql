@@ -4,14 +4,14 @@ CREATE DATABASE bicicleteria_jr;
 USE bicicleteria_jr;
 
 CREATE TABLE countries (
-    id_country INT AUTO_INCREMENT,
+    id_country INT UNSIGNED AUTO_INCREMENT,
     name VARCHAR(80) UNIQUE NOT NULL,
     phone_code VARCHAR(5) NOT NULL,
     CONSTRAINT pk_id_country PRIMARY KEY (id_country)
 );
 
 CREATE TABLE cities (
-    id_city INT AUTO_INCREMENT,
+    id_city INT UNSIGNED AUTO_INCREMENT,
     name VARCHAR(80) NOT NULL,
     id_country INT NOT NULL,
     CONSTRAINT pk_id_city PRIMARY KEY (id_city),
@@ -20,13 +20,13 @@ CREATE TABLE cities (
 );
 
 CREATE TABLE brands (
-    id_brand INT AUTO_INCREMENT,
+    id_brand INT UNSIGNED AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
     CONSTRAINT pk_id_brand PRIMARY KEY(id_brand)
 );
 
 CREATE TABLE models (
-    id_model INT AUTO_INCREMENT,
+    id_model INT UNSIGNED AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
     id_brand INT NOT NULL,
     CONSTRAINT pk_id_model PRIMARY KEY (id_model),
@@ -35,7 +35,7 @@ CREATE TABLE models (
 );
 
 CREATE TABLE document_types (
-    id_document_type INT AUTO_INCREMENT,
+    id_document_type INT UNSIGNED AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
     CONSTRAINT pk_id_document_type PRIMARY KEY (id_document_type) 
 );
@@ -66,13 +66,13 @@ CREATE TABLE suppliers (
 );
 
 CREATE TABLE phone_types (
-    id_phone_type INT AUTO_INCREMENT,
+    id_phone_type INT UNSIGNED AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
     CONSTRAINT pk_id_phone_type PRIMARY KEY (id_phone_type)
 );
 
 CREATE TABLE supplier_model (
-    id_supplier_model INT AUTO_INCREMENT,
+    id_supplier_model INT UNSIGNED AUTO_INCREMENT,
     id_supplier VARCHAR(50) NOT NULL,
     id_model INT NOT NULL,
     CONSTRAINT pk_id_supplier_model PRIMARY KEY (id_supplier_model),
@@ -83,7 +83,7 @@ CREATE TABLE supplier_model (
 ); 
 
 CREATE TABLE suppliers_phone (
-    id_suppliers_phone INT AUTO_INCREMENT,
+    id_suppliers_phone INT UNSIGNED AUTO_INCREMENT,
     phone_number VARCHAR(15),
     id_supplier VARCHAR(50),
     id_phone_type INT NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE bike_type (
 )
 
 CREATE TABLE bikes (
-    id_bike INT AUTO_INCREMENT,
+    id_bike INT UNSIGNED AUTO_INCREMENT,
     id_supplier_model INT UNIQUE,
     id_bike_type INT NOT NULL,
     price DECIMAL(10,2) UNSIGNED  NOT NULL,
@@ -132,7 +132,7 @@ CREATE TABLE customers (
 );
 
 CREATE TABLE sales (
-    id_sale INT AUTO_INCREMENT,
+    id_sale INT UNSIGNED AUTO_INCREMENT,
     date DATE DEFAULT (CURDATE()),
     id_customer VARCHAR(50) NOT NULL,
     total DECIMAL(10, 2) DEFAULT 0,
@@ -142,7 +142,7 @@ CREATE TABLE sales (
 );
 
 CREATE TABLE sale_details (
-    id_sale_details INT AUTO_INCREMENT,
+    id_sale_details INT UNSIGNED AUTO_INCREMENT,
     id_sale INT NOT NULL,
     id_bike INT NOT NULL,
     quantity INT UNSIGNED DEFAULT 1,
@@ -155,7 +155,7 @@ CREATE TABLE sale_details (
 );
 
 CREATE TABLE spares (
-    id_spare INT AUTO_INCREMENT,
+    id_spare INT UNSIGNED AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
     description TEXT,
     price DECIMAL(10,2) UNSIGNED NOT NULL,
@@ -167,7 +167,7 @@ CREATE TABLE spares (
 );
 
 CREATE TABLE purchases (
-    id_purchase INT AUTO_INCREMENT,
+    id_purchase INT UNSIGNED AUTO_INCREMENT,
     date DATE DEFAULT (CURDATE()),
     id_supplier VARCHAR(50) NOT NULL,
     total DECIMAL(10,2) DEFAULT 0,
@@ -177,7 +177,7 @@ CREATE TABLE purchases (
 );
 
 CREATE TABLE purchase_details (
-    id_purchase_details INT AUTO_INCREMENT,
+    id_purchase_details INT UNSIGNED AUTO_INCREMENT,
     id_purchase INT NOT NULL,
     id_spare INT NOT NULL,
     quantity INT UNSIGNED DEFAULT 1,
@@ -190,7 +190,7 @@ CREATE TABLE purchase_details (
 );
 
 CREATE TABLE refunds (
-    id_refund INT AUTO_INCREMENT,
+    id_refund INT UNSIGNED AUTO_INCREMENT,
     id_customer VARCHAR(50) NOT NULL,
     id_bike INT,
     id_sale INT,
@@ -202,6 +202,19 @@ CREATE TABLE refunds (
     CONSTRAINT fk_id_sale_refunds FOREIGN KEY (id_sale)
     REFERENCES sales(id_sale)
 );
+
+-- indexes
+CREATE UNIQUE INDEX idx_id_brand
+ON brands (id_brand, name);
+
+CREATE UNIQUE INDEX idx_id_contact
+ON contacts (id_contact);
+
+CREATE INDEX idx_id_modelo
+ON models (id_model);
+
+CREATE UNIQUE INDEX idx_id_customer
+ON customers (id_customer);
 
 DELIMITER $$
 -- triggers
