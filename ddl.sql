@@ -94,15 +94,24 @@ CREATE TABLE suppliers_phone (
     REFERENCES suppliers(id_supplier)
 );
 
+CREATE TABLE bike_type (
+    id_bike_type INT UNSIGNED AUTO_INCREMENT,
+    name VARCHAR(20),
+    CONSTRAINT pk_id_bike_type PRIMARY KEY (id_bike_type)
+)
+
 CREATE TABLE bikes (
     id_bike INT AUTO_INCREMENT,
     id_supplier_model INT UNIQUE,
+    id_bike_type INT NOT NULL,
     price DECIMAL(10,2) UNSIGNED  NOT NULL,
     stock INT UNSIGNED DEFAULT 0,
     CHECK (price > 0.00),
     CONSTRAINT pk_id_bike PRIMARY KEY (id_bike),
     CONSTRAINT fk_id_supplier_model_bikes FOREIGN KEY (id_supplier_model)
-    REFERENCES supplier_model(id_supplier_model)
+    REFERENCES supplier_model(id_supplier_model),
+    CONSTRAINT fk_id_bike_type_bike FOREIGN KEY (id_bike_type)
+    REFERENCES bike_type (id_bike_type)
 );
 
 CREATE TABLE customers (
@@ -148,8 +157,8 @@ CREATE TABLE sale_details (
 CREATE TABLE spares (
     id_spare INT AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
-    description VARCHAR(200),
-    price DECIMAL(10,2) UNSIGNED  NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) UNSIGNED NOT NULL,
     stock INT UNSIGNED DEFAULT 0,
     id_supplier VARCHAR(50),
     CONSTRAINT pk_id_spare PRIMARY KEY (id_spare),
@@ -249,8 +258,8 @@ FOR EACH ROW
 BEGIN 
     DECLARE available_stock INT;
     DECLARE unit_price_t DECIMAL(10,2);
-    DECLARE id_supplier_spare INT;
-    DECLARE id_supplier_purchase INT;
+    DECLARE id_supplier_spare VARCHAR(50);
+    DECLARE id_supplier_purchase VARCHAR(50);
 
     SELECT stock, price INTO available_stock, unit_price_t
     FROM spares
