@@ -607,6 +607,20 @@ DELIMITER ;
 Este caso de uso describe cómo el sistema calcula el total de ventas realizadas en un mes específico.
 
 ```sql
+DELIMITER $$
+CREATE FUNCTION total_ventas(specifiec_month MONTH)
+RETURNS INT
+READS SQL DATA
+BEGIN 
+    DECLARE number_sales INT;
+    SELECT count(*) INTO number_sales
+    FROM sales AS s
+    WHERE MONTH(date) = specifiec_month;
+    RETURN number_sales;
+END $$
+DELIMITER ;
+
+SELECT total_ventas(7);
 ```
 
 ## Caso de Uso 2: Calcular el Promedio de Ventas por Cliente
@@ -614,6 +628,22 @@ Este caso de uso describe cómo el sistema calcula el total de ventas realizadas
 Este caso de uso describe cómo el sistema calcula el promedio de ventas realizadas por un cliente específico.
 
 ```sql
+DELIMITER $$
+CREATE FUNCTION avg_ventas(id_cliente_in VARCHAR(50))
+RETURNS DECIMAL(10,2)
+READS SQL DATA
+BEGIN
+    DECLARE sales_avg DECIMAL(10,2);
+
+    SELECT AVG(s.total) AS avg_ventas INTO sales_avg
+    FROM sales AS s
+    WHERE id_customer = id_cliente_in;
+
+    RETURN IFNULL(sales_avg, 0.0);
+END $$
+DELIMITER ;
+
+SELECT avg_ventas('100548745');
 ```
 
 ## Caso de Uso 3: Contar el Número de Ventas Realizadas en un Rango de Fechas
@@ -621,6 +651,19 @@ Este caso de uso describe cómo el sistema calcula el promedio de ventas realiza
 Este caso de uso describe cómo el sistema cuenta el número de ventas realizadas dentro de un rango de fechas específico.
 
 ```sql
+DELIMITER $$
+CREATE FUNCTION total_ventas_between(specified_date_start DATE, specified_date_end DATE)
+RETURNS INT
+READS SQL DATA
+BEGIN 
+    DECLARE number_sales INT;
+    SELECT count(*) INTO number_sales
+    FROM sales AS s
+    WHERE date BETWEEN specified_date_start AND specified_date_end;
+    RETURN number_sales;
+END $$
+DELIMITER ;
+SELECT total_ventas_between('2024-07-01', '2024-08-01');
 ```
 
 ## Caso de Uso 4: Calcular el Total de Repuestos Comprados por Proveedor
@@ -628,6 +671,20 @@ Este caso de uso describe cómo el sistema cuenta el número de ventas realizada
 Este caso de uso describe cómo el sistema calcula el total de repuestos comprados a un proveedor específico.
 
 ```sql
+DELIMITER //
+CREATE FUNCTION calc_total_repuestos_prov(id_proveedor_in VARCHAR(50))
+RETURNS INT
+READS SQL DATA
+BEGIN
+    DECLARE total_compras INT;
+    SELECT SUM(stock) INTO total_compras
+    FROM spares
+    WHERE id_supplier = id_proveedor_in;
+    RETURN IFNULL(total_compras, 0);
+END //
+DELIMITER ;
+
+SELECT calc_total_repuestos_prov('BMC45485');
 ```
 
 ## Caso de Uso 5: Calcular el Ingreso Total por Año
@@ -635,12 +692,248 @@ Este caso de uso describe cómo el sistema calcula el total de repuestos comprad
 Este caso de uso describe cómo el sistema calcula el ingreso total generado en un año específico.
 
 ```sql
+DELIMITER $$
+CREATE FUNCTION  total_incomes_year (specified_year YEAR)
+RETURNS DECIMAL(10,2)
+READS SQL DATA
+BEGIN
+    DECLARE total_incomes DECIMAL(10,2);
+    SELECT SUM(total) INTO total_incomes
+    FROM sales
+    WHERE YEAR(date) = specified_year;
+    RETURN specified_year;
+END $$
+DELIMITER ;
+
+SELECT total_incomes_year(2024);
 ```
-ahorita guarda y hace el pull request
+
 ## Caso de Uso 6: Calcular el Número de Clientes Activos en un Mes
 
 Este caso de uso describe cómo el sistema cuenta el número de clientes que han
 realizado al menos una compra en un mes específico.
 
 ```sql
+DELIMITER $$ 
+CREATE FUNCTION active_customers(specified_month INT)
+RETURNS INT
+READS SQL DATA
+BEGIN
+    DECLARE number_active_customers INT;
+    SELECT COUNT(c.id_customer) INTO number_active_customers
+    FROM customers AS c
+    JOIN sales AS s USING(id_customer)
+    WHERE MONTH(s.date) = specified_month;
+    RETURN number_active_customers;
+END $$
+DELIMITER ;
+
+SELECT active_customers(7);
 ```
+
+## Caso de Uso 7: Calcular el Promedio de Compras por Proveedor
+
+Este caso de uso describe cómo el sistema calcula el promedio de compras
+realizadas a un proveedor específico.
+
+```sql
+DELIMITER //
+CREATE FUNCTION calc_avg_compras_prov(id_prov_in VARCHAR(50))
+RETURNS DECIMAL(10, 2);
+READS SQL DATA;
+BEGIN
+    DECLARE avg_compras_prov DECIMAL(10, 2);
+    SELECT AVG(COUNT(p.id_supplier)) INTO avg_compras_prov
+    FROM purchases AS p
+    WHERE p.id_supplier = id_prov_in;
+
+    RETURN IFNULL(avg_compras_prov, 0.0);
+END //
+DELIMITER ;
+
+SELECT calc_avg_compras_prov('BMC45485')
+```
+
+## Caso de Uso 8: Calcular el Total de Ventas por Marca
+
+Este caso de uso describe cómo el sistema calcula el total de ventas agrupadas por
+la marca de las bicicletas vendidas.
+
+```sql
+DELIMITER $$
+CREATE FUNCTION total_sales_brand (id_brand_in INT)
+RETURNS INT
+READS SQL DATA;
+BEGIN
+    DECLARE sales_group_brand INT;
+    SELECT COUNT(s.id_sale) INTO id_brand_in
+    FROM sales AS s
+    JOIN bikes USING(id_bike)
+    JOIN id_supplier_model USING (id_supplier_model)
+    JOIN models USING (id_model)
+    JOIN brands AS b USING(id_brand)
+    WHERE b.id_brand = id_brand_in;
+    RETURN sales_group_brand;
+END $$
+DELIMITER ;
+
+SELECT total_sales_brand(1);
+```
+
+## Caso de Uso 9: Calcular el Promedio de Precios de Bicicletas por Marca
+
+Este caso de uso describe cómo el sistema calcula el promedio de precios de las
+bicicletas agrupadas por marca.
+
+```sql
+DELIMITER //
+CREATE FUNCTION calc_avg_brand_bike_price(id_brand_in INT)
+RETURNS DECIMAL(10,2);
+READS SQL DATA
+BEGIN
+    DECLARE avg_bike_price_brand DECIMAL(10,2);
+    SELECT AVG(b.price) INTO avg_bike_price_brand
+    FROM bikes AS b
+    JOIN supplier_model USING (id_supplier_model)
+    JOIN models USING (id_models)
+    JOIN brands USING (id_brand)
+    WHERE id_brand = id_brand_in;
+
+    RETURN IFNULL(avg_bike_price, 0);
+END //
+DELIMITER ;
+
+SELECT calc_avg_brand_bike_price('BMC45485');
+```
+
+## Caso de Uso 10: Contar el Número de Repuestos por Proveedor
+
+Este caso de uso describe cómo el sistema cuenta el número de repuestos
+suministrados por cada proveedor.
+
+```sql
+DELIMITER $$
+CREATE FUNCTION spare_number_supplier(id_supplier_in VARCHAR(50))
+RETURNS VARCHAR(255)
+READS SQL DATA 
+BEGIN
+    DECLARE spare_number VARCHAR(255);
+    SELECT CONCAT(SUM(sp.quantity), ' < ', s.name) INTO spare_number
+    FROM spares
+    JOIN suppliers AS s USING(id_supplier)
+    WHERE s.id_supplier = id_supplier_in
+    GROUP BY s.id_supplier;
+END $$
+
+DELIMITER ;
+```
+## Caso de Uso 11: Calcular el Total de Ingresos por Cliente
+
+Este caso de uso describe cómo el sistema calcula el total de ingresos generados por cada cliente.
+
+```sql
+DELIMITER $$
+CREATE FUNCTION calc_income_customer(id_customer_in VARCHAR(20))
+RETURNS DECIMAL(10, 2)
+READS SQL DATA
+BEGIN
+    DECLARE income_customer DECIMAL(10, 2);
+    SELECT SUM(total) INTO income_customer
+    FROM sales 
+    WHERE id_customer = id_customer_in
+    GROUP BY (id_customer);
+    
+    RETURN IFNULL(income_customer, 0);
+END $$
+DELIMITER ;
+
+SELECT calc_income_customer('100548745');
+```
+
+## Caso de Uso 12: Calcular el Promedio de Compras Mensuales
+
+Este caso de uso describe cómo el sistema calcula el promedio de compras
+realizadas mensualmente por todos los clientes.
+
+```sql
+DELIMITER $$
+CREATE FUNCTION calc_avg_buys_monthly(month_num MONTH)
+RETURNS DECIMAL(10,2)
+READS SQL DATA
+BEGIN
+    DECLARE total_income_monthly DECIMAL(10,2);
+
+    SELECT SUM(total) INTO total_income_monthly
+    FROM sales 
+    WHERE MONTH(date) = month_num;
+
+    RETURN IFNULL(total_income_monthly, 0.0);
+END $$
+DELIMITER ;
+
+SELECT calc_avg_buys_monthly(7);
+```
+
+## Caso de Uso 13: Calcular el Total de Ventas por Día de la Semana
+
+Este caso de uso describe cómo el sistema calcula el total de ventas realizadas en
+cada día de la semana.
+
+```sql
+DELIMITER $$
+CREATE FUNCTION calc_sales_per_day(exact_date DATE)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE sales_per_day DECIMAL(10,2);
+    
+    SELECT SUM(total) INTO sales_per_day
+    FROM sales
+    WHERE date = exact_date;
+    
+    RETURN IFNULL(sales_per_day);
+END $$
+DELIMITER ;
+
+SELECT calc_sales_per_day(CURDATE());
+```
+
+## Caso de Uso 14: Contar el Número de Ventas por Categoría de Bicicleta
+
+Este caso de uso describe cómo el sistema cuenta el número de ventas realizadas para cada categoría de bicicleta (por ejemplo, montaña, carretera, híbrida).
+
+```sql
+DELIMITER $$
+CREATE FUNCTION sale_num_per_bike_type(id_bike_type INT)
+RETURNS INT 
+READS SQL DATA
+BEGIN
+    DECLARE sale_bike_type INT;
+    
+    SELECT COUNT(sd.id_bike) INTO sale_bike_type
+    FROM sale_details AS sd
+    WHERE
+    (
+        SELECT id_model
+    )
+END $$
+DELIMITER ;
+```
+
+CARAJOCARAJOCARAJOCARAJOCARAJOCARAJO
+
+## Caso de Uso 15: Calcular el Total de Ventas por Año y Mes
+
+Este caso de uso describe cómo el sistema calcula el total de ventas realizadas cada
+mes, agrupadas por año.
+
+```sql
+DELIMITER $$
+CREATE FUNCTION group_month_by_year()
+RETURNS NULL
+BEGIN
+END $$
+DELIMITER ;
+```
+
+wtf
