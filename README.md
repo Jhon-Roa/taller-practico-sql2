@@ -10,19 +10,19 @@ Este caso de uso describe cómo el sistema gestiona el inventario de bicicletas,
 #### Agregar nueva bicicleta
 
 ```sql
-CALL add_bike(2, 1750.32, 7);
+CALL add_bike(8, 1750.32, 7);
 ```
 
 #### Actualizar bicicleta
 
 ```sql
-CALL update_bike(1, 1999.99, 20)
+CALL update_bike(1, 1999.99, 20);
 ```
 
 #### Eliminar bicicleta
 
 ```sql
-CALL delete_bike(1)
+CALL delete_bike(1);
 ```
 
 ## Caso de Uso 2: Registro de Ventas
@@ -39,8 +39,8 @@ CALL sale_register('100548745', @id_sale);
 #### Añadir sale details
 
 ```sql
-CALL sale_detail_register (@id_sale, 2, 1);
-CALL sale_detail_register (@id_sale, 1, 1);
+CALL sale_details_register (@id_sale, 2, 1);
+CALL sale_details_register (@id_sale, 3, 1);
 ```
 
 ## caso de Uso 3: Gestion de Proveedores y Repuestos
@@ -50,33 +50,32 @@ Este caso de uso describe cómo el sistema gestiona la información de proveedor
 #### Añadir proveedor
 
 ```sql
-SET @id_supplier = 0;
-CALL add_supplier("proveedor nacional de bicicletas", 1, 313023297, 1, "nationalsupplier@gmail.com", 1, @id_supplier);
+CALL add_supplier("1.213.213.21", "proveedor nacional de bicicletas", "UK598715", 313023297, 1, "nationalsupplier@gmail.com", 1);
 ```
 
 #### añadir respuesto
 
 ```sql
 SET @id_spare = 0;
-CALL add_spare("llanta todoterreno", "llanta hecha para bicicletas de montaña, de 16'", 100, 50, @id_supplier, @id_spare);
+CALL add_spare("llanta todoterreno", "llanta hecha para bicicletas de montaña, de 16'", 100, 50, "1.213.213.21", @id_spare);
 ```
 
 #### actualizar proveedor
 
 ```sql
-CALL update_supplier(@id_supplier, "proveedor internacional de bicicletas", 1, "internationalsupplier@gmail.com", 2);
+CALL update_supplier("1.213.213.21", "proveedor internacional de bicicletas", "100052748", "internationalsupplier@gmail.com", 2);
 ```
 
 #### actualizar repuesto
 
 ```sql
-CALL update_spare(@id_spare, "llanta bmx", "llanta hecha para bicicletas de bmx, de 12'", 101, 90, @id_supplier);
+CALL update_spare(@id_spare, "llanta bmx", "llanta hecha para bicicletas de bmx, de 12'", 101, 90);
 ```
 
 #### eliminar proveedor
 
 ```sql
-CALL delete_supplier(@id_supplier);
+CALL delete_supplier("1.213.213.21");
 ```
 
 #### eliminar repuesto
@@ -99,7 +98,7 @@ CALL show_sales(@id_customer);
 #### detalles de una venta
 
 ```sql
-CALL show_table_details(1, @id_customer);
+CALL show_sale_details(1, @id_customer);
 ```
 
 ## Caso de Uso 5: Gestión de Compras de Repuestos
@@ -111,14 +110,14 @@ proveedores, permitiendo registrar una nueva compra, especificar los repuestos c
 
 ```sql
 SET @id_purchase = 0;
-CALL purchase_register('BMC45485', @id_purchase)
+CALL purchase_register('BMC45485', @id_purchase);
 ```
 
 #### Registrar detalles de una compra
 
 ```sql
-CALL purchase_detail_register (@id_purchase, 2, 1);
-CALL purchase_detail_register (@id_purchase, 1, 1);
+CALL purchase_details_register (@id_purchase, 3, 1);
+CALL purchase_details_register (@id_purchase, 1, 1);
 ```
 # Casos de Uso con Subconsultas
 
@@ -137,9 +136,7 @@ FROM (
     JOIN supplier_model AS sm USING (id_model)
     JOIN bikes AS b USING (id_supplier_model)
     JOIN sale_details AS sd USING (id_bike)
-    GROUP BY 
-        (SELECT name FROM brands WHERE id_brand = m.id_brand),
-        m.name
+    GROUP BY m.id_brand, m.name
 ) AS ventas_por_modelo
 WHERE total_ventas = (
     SELECT MAX(subconsulta.total_ventas)
@@ -152,9 +149,7 @@ WHERE total_ventas = (
         JOIN supplier_model AS sm_sub USING (id_model)
         JOIN bikes AS b_sub USING (id_supplier_model)
         JOIN sale_details AS sd_sub USING (id_bike)
-        GROUP BY 
-            (SELECT name FROM brands WHERE id_brand = m_sub.id_brand),
-            m_sub.name
+        GROUP BY m_sub.id_brand, m_sub.name
     ) AS subconsulta
     WHERE subconsulta.marca = ventas_por_modelo.marca
 );
@@ -175,7 +170,7 @@ FROM (
   AND YEAR(s.date) = 2024) AS total_gastado
   FROM customers AS c
 ) subquery
-WHERE total_gastado IS NOT NULL
+WHERE total_gastado != 0
 ORDER BY total_gastado DESC;
 ```
 
@@ -188,7 +183,7 @@ SELECT id_supplier, proveedor, contacto, compras
 FROM (
   SELECT s.id_supplier,
   s.name AS proveedor,
-  (SELECT CONCAT(first_name, ' ', middle_name)
+  (SELECT IF(middle_name IS NULL, first_name, CONCAT(first_name, ' ', middle_name))
   FROM contacts
   WHERE id_contact = s.id_contact) AS contacto,
   (SELECT COUNT(*)
@@ -209,9 +204,9 @@ Este caso de uso describe cómo el sistema permite consultar los repuestos que h
 SELECT s.name, s.price, s.stock,
   (SELECT COUNT(id_spare)
   FROM purchase_details pd
-  WHERE pd.id_spare = s.id_spare) AS 'Veces comprado'
+  WHERE pd.id_spare = s.id_spare) AS Veces_comprado
 FROM spares s
-ORDER BY 'Veces comprado' ASC;
+ORDER BY Veces_comprado DESC;
 ```
 ## Caso de Uso 10: Ciudades con Más Ventas Realizadas
 
@@ -230,6 +225,7 @@ FROM (
     )) AS ventas
     FROM cities AS c
     ) AS ciudad_ventas
+WHERE ventas > 0
 ORDER BY ventas DESC;
 ```
 
@@ -258,7 +254,7 @@ FROM countries AS c
 LEFT JOIN cities AS ci USING (id_country)
 LEFT JOIN suppliers AS s USING (id_city)
 GROUP BY c.id_country, c.name
-ORDER BY numero_de_proveedores DESC, c.name ASC;
+ORDER BY COUNT(s.id_supplier) DESC, c.name ASC;
 ```
 
 ## Caso de Uso 13: Compras de Repuestos por Proveedor
@@ -272,7 +268,7 @@ FROM suppliers AS s
 JOIN purchases AS p USING(id_supplier)
 JOIN purchase_details AS pd USING(id_purchase)
 GROUP BY s.id_supplier, s.name
-ORDER BY repuestos_comprados DESC
+ORDER BY repuestos_comprados DESC;
 ```
 
 ## Caso de Uso 14: Clientes con Ventas en un Rango de Fechas
@@ -281,10 +277,10 @@ Este caso de uso describe cómo el sistema permite consultar los clientes que ha
 realizado compras dentro de un rango de fechas específico.
 
 ```sql
-SELECT c.id_customer, CONCAT(c.first_name, ' ', c.middle_name), c.email
+SELECT c.id_customer, IF(middle_name IS NULL, first_name, CONCAT(first_name, ' ', middle_name)) AS contacto, c.email
 FROM customers AS c
 JOIN sales AS s USING(id_customer)
-WHERE s.date BETWEEN '2024-07-01' AND '2024-08-01'
+WHERE s.date BETWEEN '2024-07-01' AND '2024-08-01';
 ```
 
 # Casos de Uso para Implementar Procedimientos Almacenados
@@ -310,8 +306,8 @@ END $$
 
 SET @id_sale = 0;
 CALL sale_register('100548745', @id_sale);
-CALL purchase_detail_register (@id_purchase, 2, 1);
-CALL purchase_detail_register (@id_purchase, 1, 1);
+CALL sale_details_register (@id_sale, 2, 1);
+CALL sale_details_register (@id_sale, 3, 1);
 ```
 
 ## Caso de Uso 2: Registro de Nueva Venta
@@ -335,8 +331,8 @@ END $$
 
 SET @id_sale = 0;
 CALL sale_register('100548745', @id_sale);
-CALL purchase_detail_register (@id_purchase, 2, 1);
-CALL purchase_detail_register (@id_purchase, 1, 1);
+CALL sale_details_register (@id_sale, 2, 1);
+CALL sale_details_register (@id_sale, 3, 1);
 ```
 
 ## Caso de Uso 3: Generación de Reporte de Ventas por Cliente
@@ -377,7 +373,7 @@ BEGIN
 END $$
 DELIMITER ;
 
-CALL see_customer_details('100548745');
+CALL see_customer_sales('100548745');
 ```
 
 ## Caso de Uso 4: Registro de Compra de Repuestos
@@ -402,9 +398,9 @@ END $$
 DELIMITER ;
 
 SET @id_purchase = 0;
-CALL purchase_register('BMC45485', @id_purchase)
-CALL purchase_detail_register (@id_purchase, 2, 1);
-CALL purchase_detail_register (@id_purchase, 1, 1);
+CALL purchase_register('BMC45485', @id_purchase);
+CALL purchase_details_register (@id_purchase, 3, 1);
+CALL purchase_details_register (@id_purchase, 1, 1);
 ```
 
 ## Caso de Uso 5: Generación de Reporte de Inventario
@@ -412,7 +408,6 @@ CALL purchase_detail_register (@id_purchase, 1, 1);
 Este caso de uso describe cómo el sistema genera un reporte de inventario de bicicletas y repuestos.
 
 ```sql
-DELIMITER $$
 DELIMITER $$
 CREATE PROCEDURE bike_spare_report()
 BEGIN
@@ -456,15 +451,15 @@ BEGIN
   SET price = price * (1 + increase/100)
   WHERE id_supplier_model IN (
     SELECT sm.id_supplier_model 
-    FROM suppliers_model AS sm
+    FROM supplier_model AS sm
     JOIN models USING(id_model)
     JOIN brands AS b USING(id_brand)
     WHERE b.id_brand = id_brand_in
   );
 END $$
-
-CALL increase_brand_prices(1, 20)
 DELIMITER ;
+
+CALL increase_brand_prices(1, 20);
 ```
 
 ## Caso de Uso 7: Generación de Reporte de Clientes por Ciudad
@@ -473,15 +468,17 @@ Este caso de uso describe cómo el sistema genera un reporte de clientes agrupad
 
 ```sql
 DELIMITER $$
-CREATE PROCEDURE customers_group_by_city ()
+CREATE PROCEDURE customers_group_by_city()
 BEGIN 
-  SELECT c.id_city, c.name AS ciudad, COUNT(cu.id_customer)
-  FROM cities
-  JOIN customers USING(id_city)
+  SELECT c.id_city, c.name AS ciudad, COUNT(cu.id_customer) AS numero_clientes
+  FROM cities AS c
+  JOIN customers AS cu USING(id_city)
   GROUP BY c.id_city, c.name
   ORDER BY c.id_city;
 END $$
 DELIMITER ;
+
+CALL customers_group_by_city();
 ```
 
 ## Caso de Uso 8: Verificación de Stock antes de Venta
@@ -528,9 +525,11 @@ BEGIN
   
   UPDATE bikes 
   SET stock = stock + 1
-  WHERE id_bike = id_bike_in
-END
+  WHERE id_bike = id_bike_in;
+END $$
 DELIMITER ;
+
+CALL refund_bike(3, "100548745", 1);
 ```
 
 ## Caso de Uso 10: Generación de Reporte de Compras por Proveedor
@@ -544,7 +543,7 @@ BEGIN
     DECLARE supplier_exists INT;
     
     SELECT COUNT(*) INTO supplier_exists 
-    FROM supplier 
+    FROM suppliers
     WHERE id_supplier = id_supplier_in;
     
     IF supplier_exists = 0 THEN
@@ -555,7 +554,7 @@ BEGIN
             p.id_purchase,
             p.date AS fecha_compra,
             s.name AS nombre_repuesto,
-            s.price AS precio_repuesto
+            s.price AS precio_repuesto,
             pd.quantity AS cantidad_comprada,
             (s.price * pd.quantity) AS subtotal,
             p.total AS total_compre
@@ -568,6 +567,8 @@ BEGIN
     END IF;
 END $$
 DELIMITER ;
+
+CALL see_supplier_buys("BMC45485");
 ```
 
 ## Caso de Uso 11: Calculadora de Descuentos en Ventas
@@ -582,7 +583,7 @@ BEGIN
 
   IF quantity_in > 100 THEN
     SIGNAL SQLSTATE '45000'
-    SET MESSAGE_TEXT = 'discount cant be over 100%'
+    SET MESSAGE_TEXT = 'discount cant be over 100%';
   END IF;
 
   
@@ -596,8 +597,11 @@ BEGIN
 
   UPDATE sales
   SET total = (total * (1 - discount / 100))
+  WHERE id_sale = last_id_sale;
 END $$
 DELIMITER ;
+
+CALL sale_discount("100548745", 3, 5, 20);
 ```
 
 # Casos de Uso para Funciones de Resumen
@@ -608,14 +612,14 @@ Este caso de uso describe cómo el sistema calcula el total de ventas realizadas
 
 ```sql
 DELIMITER $$
-CREATE FUNCTION total_ventas(specifiec_month MONTH)
+CREATE FUNCTION total_ventas(specified_month INT)
 RETURNS INT
 READS SQL DATA
 BEGIN 
     DECLARE number_sales INT;
     SELECT count(*) INTO number_sales
     FROM sales AS s
-    WHERE MONTH(date) = specifiec_month;
+    WHERE MONTH(date) = specified_month;
     RETURN number_sales;
 END $$
 DELIMITER ;
@@ -739,19 +743,19 @@ realizadas a un proveedor específico.
 ```sql
 DELIMITER //
 CREATE FUNCTION calc_avg_compras_prov(id_prov_in VARCHAR(50))
-RETURNS DECIMAL(10, 2);
-READS SQL DATA;
+RETURNS DECIMAL(10, 2)
+READS SQL DATA
 BEGIN
     DECLARE avg_compras_prov DECIMAL(10, 2);
-    SELECT AVG(COUNT(p.id_supplier)) INTO avg_compras_prov
-    FROM purchases AS p
-    WHERE p.id_supplier = id_prov_in;
+    SELECT AVG(total) INTO avg_compras_prov
+    FROM purchases 
+    WHERE id_supplier = id_prov_in;
 
     RETURN IFNULL(avg_compras_prov, 0.0);
 END //
 DELIMITER ;
 
-SELECT calc_avg_compras_prov('BMC45485')
+SELECT calc_avg_compras_prov('BMC45485');
 ```
 
 ## Caso de Uso 8: Calcular el Total de Ventas por Marca
@@ -763,13 +767,14 @@ la marca de las bicicletas vendidas.
 DELIMITER $$
 CREATE FUNCTION total_sales_brand (id_brand_in INT)
 RETURNS INT
-READS SQL DATA;
+READS SQL DATA
 BEGIN
     DECLARE sales_group_brand INT;
-    SELECT COUNT(s.id_sale) INTO id_brand_in
+    SELECT COUNT(s.id_sale) INTO sales_group_brand
     FROM sales AS s
+    JOIN sale_details USING(id_sale)
     JOIN bikes USING(id_bike)
-    JOIN id_supplier_model USING (id_supplier_model)
+    JOIN supplier_model USING (id_supplier_model)
     JOIN models USING (id_model)
     JOIN brands AS b USING(id_brand)
     WHERE b.id_brand = id_brand_in;
@@ -788,22 +793,22 @@ bicicletas agrupadas por marca.
 ```sql
 DELIMITER //
 CREATE FUNCTION calc_avg_brand_bike_price(id_brand_in INT)
-RETURNS DECIMAL(10,2);
+RETURNS DECIMAL(10,2)
 READS SQL DATA
 BEGIN
     DECLARE avg_bike_price_brand DECIMAL(10,2);
     SELECT AVG(b.price) INTO avg_bike_price_brand
     FROM bikes AS b
     JOIN supplier_model USING (id_supplier_model)
-    JOIN models USING (id_models)
+    JOIN models USING (id_model)
     JOIN brands USING (id_brand)
     WHERE id_brand = id_brand_in;
 
-    RETURN IFNULL(avg_bike_price, 0);
+    RETURN IFNULL(avg_bike_price_brand, 0);
 END //
 DELIMITER ;
 
-SELECT calc_avg_brand_bike_price('BMC45485');
+SELECT calc_avg_brand_bike_price(1);
 ```
 
 ## Caso de Uso 10: Contar el Número de Repuestos por Proveedor
@@ -818,14 +823,17 @@ RETURNS VARCHAR(255)
 READS SQL DATA 
 BEGIN
     DECLARE spare_number VARCHAR(255);
-    SELECT CONCAT(SUM(sp.quantity), ' < ', s.name) INTO spare_number
-    FROM spares
+    SELECT CONCAT(SUM(sp.stock), ' <- ', s.name) INTO spare_number
+    FROM spares AS sp
     JOIN suppliers AS s USING(id_supplier)
     WHERE s.id_supplier = id_supplier_in
     GROUP BY s.id_supplier;
-END $$
 
+    RETURN spare_number;
+END $$
 DELIMITER ;
+
+SELECT spare_number_supplier('BMC45485');
 ```
 ## Caso de Uso 11: Calcular el Total de Ingresos por Cliente
 
@@ -857,7 +865,7 @@ realizadas mensualmente por todos los clientes.
 
 ```sql
 DELIMITER $$
-CREATE FUNCTION calc_avg_buys_monthly(month_num MONTH)
+CREATE FUNCTION calc_avg_buys_monthly(month_num INT)
 RETURNS DECIMAL(10,2)
 READS SQL DATA
 BEGIN
@@ -891,7 +899,7 @@ BEGIN
     FROM sales
     WHERE date = exact_date;
     
-    RETURN IFNULL(sales_per_day);
+    RETURN IFNULL(sales_per_day, 0.00);
 END $$
 DELIMITER ;
 
@@ -904,23 +912,28 @@ Este caso de uso describe cómo el sistema cuenta el número de ventas realizada
 
 ```sql
 DELIMITER $$
-CREATE FUNCTION sale_num_per_bike_type(id_bike_type INT)
-RETURNS INT 
+CREATE FUNCTION sale_num_per_bike_type(id_bike_type_in INT)
+RETURNS VARCHAR(255) 
 READS SQL DATA
 BEGIN
-    DECLARE sale_bike_type INT;
-    
-    SELECT COUNT(sd.id_bike) INTO sale_bike_type
-    FROM sale_details AS sd
-    WHERE
-    (
-        SELECT id_model
-    )
+    DECLARE numero_sales_bike_type VARCHAR(255);
+
+    SELECT CONCAT(COUNT(DISTINCT s.id_sale), ' <- ', bt.name) INTO numero_sales_bike_type
+    FROM bike_type AS bt
+    JOIN models AS m USING(id_bike_type)
+    JOIN supplier_model AS sm USING(id_model)
+    JOIN bikes AS b USING(id_supplier_model)
+    JOIN sale_details AS sd USING(id_bike)
+    JOIN sales AS s USING(id_sale)
+    WHERE bt.id_bike_type = id_bike_type_in
+    GROUP BY bt.id_bike_type, bt.name;
+
+    RETURN numero_sales_bike_type;
 END $$
 DELIMITER ;
-```
 
-CARAJOCARAJOCARAJOCARAJOCARAJOCARAJO
+SELECT sale_num_per_bike_type(1);
+```
 
 ## Caso de Uso 15: Calcular el Total de Ventas por Año y Mes
 
@@ -929,11 +942,15 @@ mes, agrupadas por año.
 
 ```sql
 DELIMITER $$
-CREATE FUNCTION group_month_by_year()
-RETURNS NULL
+CREATE PROCEDURE group_month_by_year(IN year_in YEAR)
 BEGIN
+    SELECT MONTH(date) AS month, COUNT(id_sale) AS numero_ventas
+    FROM sales 
+    WHERE YEAR(date) = year_in
+    GROUP BY month
+    ORDER BY month;
 END $$
 DELIMITER ;
-```
 
-wtf
+CALL group_month_by_year(2024);
+```

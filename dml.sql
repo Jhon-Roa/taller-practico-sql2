@@ -29,16 +29,16 @@ INSERT INTO bike_type (name) VALUES
 ('Electrica'),
 ('Hibrida');
 
-INSERT INTO models (name, id_biky_type, id_brand) VALUES
+INSERT INTO models (name, id_bike_type, id_brand) VALUES
 ('gn125', 1, 1),
-('mt-02', 2, 5),
+('mt-02', 1, 5),
 ('hd-C2016', 3, 4),
 ('avenger b220', 4, 2),
-('mont giant', 1, 3),
+('mont giant', 4, 3),
 ('thousand sunny', 2, 4),
-('merry', 3, 5),
+('merry', 2, 5),
 ('oro jackson', 4, 1),
-('xebec', 1, 3);
+('xebec', 2, 3);
 
 INSERT INTO document_types (name) VALUES
 ('Cedula'),
@@ -51,10 +51,10 @@ INSERT INTO contacts (id_contact, id_document_type, first_name, middle_name, las
 ('967485214', 1, 'Jhon', NULL, 'Roa', 'Pimentel'),
 ('2364859', 2, 'Petro', NULL, 'Sneider', NULL);
 
-INSERT INTO suppliers (id_supplier, name, id_contact, email) VALUES
-('BMC45485', 'Concentrados', '100052748', 'concen@sol.com'),
-('TK42195', 'Milherreros', 'UK598715', 'herr.mil@milherr.com'),
-('H1005188GF6', 'Juan Piezas', '2364859','piezas@juanp.com');
+INSERT INTO suppliers (id_supplier, name, id_contact, email, id_city) VALUES
+('BMC45485', 'Concentrados', '100052748', 'concen@sol.com', 1),
+('TK42195', 'Milherreros', 'UK598715', 'herr.mil@milherr.com', 2),
+('H1005188GF6', 'Juan Piezas', '2364859','piezas@juanp.com', 3);
 
 INSERT INTO phone_types (name) VALUES
 ('Mobile'),
@@ -98,8 +98,10 @@ INSERT INTO customers (id_customer, id_document_type, first_name, middle_name, l
 ('102045215', 1, 'Maria', NULL, 'Cimientos', 'Verdolaga', 'verdo@laga.com', '415965858', 4),
 ('5698547', 2, 'Lobezna', 'Tatiana', 'Pimentel', NULL, 'latatiana@lob.com', '4857485', 5);
 
+INSERT INTO sales (id_customer, date) VALUES
+('100548745', '2024-01-01');
+
 INSERT INTO sales (id_customer) VALUES
-('100548745'),
 ('100548745'),
 ('102045215'),
 ('5698547'),

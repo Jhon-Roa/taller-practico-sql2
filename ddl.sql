@@ -13,7 +13,7 @@ CREATE TABLE countries (
 CREATE TABLE cities (
     id_city INT UNSIGNED AUTO_INCREMENT,
     name VARCHAR(80) NOT NULL,
-    id_country INT NOT NULL,
+    id_country INT UNSIGNED NOT NULL,
     CONSTRAINT pk_id_city PRIMARY KEY (id_city),
     CONSTRAINT fk_id_country_city FOREIGN KEY (id_country)
     REFERENCES countries(id_country) ON DELETE CASCADE
@@ -25,11 +25,20 @@ CREATE TABLE brands (
     CONSTRAINT pk_id_brand PRIMARY KEY(id_brand)
 );
 
+CREATE TABLE bike_type (
+    id_bike_type INT UNSIGNED AUTO_INCREMENT,
+    name VARCHAR(20),
+    CONSTRAINT pk_id_bike_type PRIMARY KEY (id_bike_type)
+);
+
 CREATE TABLE models (
     id_model INT UNSIGNED AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
-    id_brand INT NOT NULL,
+    id_bike_type INT UNSIGNED NOT NULL,
+    id_brand INT UNSIGNED NOT NULL,
     CONSTRAINT pk_id_model PRIMARY KEY (id_model),
+    CONSTRAINT fk_id_bike_type_model FOREIGN KEY (id_bike_type)
+    REFERENCES bike_type(id_bike_type),
     CONSTRAINT fk_id_brand_model FOREIGN KEY (id_brand)
     REFERENCES brands(id_brand) ON DELETE CASCADE 
 );
@@ -42,7 +51,7 @@ CREATE TABLE document_types (
 
 CREATE TABLE contacts (
     id_contact VARCHAR(50),
-    id_document_type INT,
+    id_document_type INT UNSIGNED,
     first_name VARCHAR(20) NOT NULL,
     middle_name VARCHAR(20),
     last_name VARCHAR(20) NOT NULL,
@@ -57,7 +66,7 @@ CREATE TABLE suppliers (
     name VARCHAR(100) NOT NULL,
     id_contact VARCHAR(50),
     email VARCHAR(100) UNIQUE NOT NULL,
-    id_city INT,
+    id_city INT UNSIGNED,
     CONSTRAINT pk_id_supplier PRIMARY KEY (id_supplier),
     CONSTRAINT fk_id_contact_supplier FOREIGN KEY (id_contact)
     REFERENCES contacts(id_contact),
@@ -74,7 +83,7 @@ CREATE TABLE phone_types (
 CREATE TABLE supplier_model (
     id_supplier_model INT UNSIGNED AUTO_INCREMENT,
     id_supplier VARCHAR(50) NOT NULL,
-    id_model INT NOT NULL,
+    id_model INT UNSIGNED NOT NULL,
     CONSTRAINT pk_id_supplier_model PRIMARY KEY (id_supplier_model),
     CONSTRAINT fk_id_supplier_supplier_model FOREIGN KEY (id_supplier)
     REFERENCES suppliers(id_supplier),
@@ -86,44 +95,35 @@ CREATE TABLE suppliers_phone (
     id_suppliers_phone INT UNSIGNED AUTO_INCREMENT,
     phone_number VARCHAR(15),
     id_supplier VARCHAR(50),
-    id_phone_type INT NOT NULL,
+    id_phone_type INT UNSIGNED NOT NULL,
     CONSTRAINT pk_id_suppliers_phone PRIMARY KEY (id_suppliers_phone),
     CONSTRAINT fk_id_phone_type_suppliers_phone FOREIGN KEY (id_phone_type)
     REFERENCES phone_types(id_phone_type),
     CONSTRAINT fk_id_supplier_phone_supplier FOREIGN KEY (id_supplier)
-    REFERENCES suppliers(id_supplier)
+    REFERENCES suppliers(id_supplier) ON DELETE CASCADE
 );
-
-CREATE TABLE bike_type (
-    id_bike_type INT UNSIGNED AUTO_INCREMENT,
-    name VARCHAR(20),
-    CONSTRAINT pk_id_bike_type PRIMARY KEY (id_bike_type)
-)
 
 CREATE TABLE bikes (
     id_bike INT UNSIGNED AUTO_INCREMENT,
-    id_supplier_model INT UNIQUE,
-    id_bike_type INT NOT NULL,
+    id_supplier_model INT UNSIGNED UNIQUE,
     price DECIMAL(10,2) UNSIGNED  NOT NULL,
     stock INT UNSIGNED DEFAULT 0,
     CHECK (price > 0.00),
     CONSTRAINT pk_id_bike PRIMARY KEY (id_bike),
     CONSTRAINT fk_id_supplier_model_bikes FOREIGN KEY (id_supplier_model)
-    REFERENCES supplier_model(id_supplier_model),
-    CONSTRAINT fk_id_bike_type_bike FOREIGN KEY (id_bike_type)
-    REFERENCES bike_type (id_bike_type)
+    REFERENCES supplier_model(id_supplier_model)
 );
 
 CREATE TABLE customers (
     id_customer VARCHAR(50),
-    id_document_type INT NOT NULL,
+    id_document_type INT UNSIGNED NOT NULL,
     first_name VARCHAR(20) NOT NULL,
     middle_name VARCHAR(20),
     last_name VARCHAR(20) NOT NULL,
     second_last_name VARCHAR(20),
     email VARCHAR(100) UNIQUE NOT NULL,
     phone_number INT(15) NOT NULL,
-    id_city INT,
+    id_city INT UNSIGNED,
     CONSTRAINT pk_id_customer PRIMARY KEY (id_customer),
     CONSTRAINT fk_id_document_type_customer FOREIGN KEY (id_document_type)
     REFERENCES document_types(id_document_type),
@@ -143,8 +143,8 @@ CREATE TABLE sales (
 
 CREATE TABLE sale_details (
     id_sale_details INT UNSIGNED AUTO_INCREMENT,
-    id_sale INT NOT NULL,
-    id_bike INT NOT NULL,
+    id_sale INT UNSIGNED NOT NULL,
+    id_bike INT UNSIGNED,
     quantity INT UNSIGNED DEFAULT 1,
     CHECK (quantity > 0),
     CONSTRAINT pk_id_sale_details PRIMARY KEY (id_sale_details),
@@ -178,8 +178,8 @@ CREATE TABLE purchases (
 
 CREATE TABLE purchase_details (
     id_purchase_details INT UNSIGNED AUTO_INCREMENT,
-    id_purchase INT NOT NULL,
-    id_spare INT NOT NULL,
+    id_purchase INT UNSIGNED NOT NULL,
+    id_spare INT UNSIGNED NOT NULL,
     quantity INT UNSIGNED DEFAULT 1,
     CHECK (quantity > 0),
     CONSTRAINT pk_id_purchase_details PRIMARY KEY (id_purchase_details),
@@ -192,8 +192,8 @@ CREATE TABLE purchase_details (
 CREATE TABLE refunds (
     id_refund INT UNSIGNED AUTO_INCREMENT,
     id_customer VARCHAR(50) NOT NULL,
-    id_bike INT,
-    id_sale INT,
+    id_bike INT UNSIGNED,
+    id_sale INT UNSIGNED,
     CONSTRAINT pk_id_refund PRIMARY KEY (id_refund),
     CONSTRAINT fk_id_customer_refunds FOREIGN KEY (id_customer)
     REFERENCES customers(id_customer),
@@ -231,14 +231,23 @@ BEGIN
     WHERE id_city = OLD.id_city;
 END $$
 
-CREATE TRIGGER after_delete_supplier
-AFTER DELETE ON suppliers
+CREATE TRIGGER before_delete_supplier
+BEFORE DELETE ON suppliers
 FOR EACH ROW
 BEGIN
     UPDATE spares
     SET id_supplier = NULL
     WHERE id_supplier = OLD.id_supplier;
 END $$
+
+CREATE TRIGGER before_delete_bike
+BEFORE DELETE ON bikes
+FOR EACH ROW
+BEGIN
+    UPDATE sale_details
+    SET id_bike = NULL
+    WHERE id_bike = OLD.id_bike;
+END$$
 
 CREATE TRIGGER after_insert_sale_details
 AFTER INSERT ON sale_details
@@ -320,7 +329,7 @@ END $$
 CREATE PROCEDURE add_bike (IN id_model_nb INT, IN price_nb DECIMAL(10,2), IN stock_nb INT)
 BEGIN
     INSERT INTO bikes (id_supplier_model, price, stock)
-    VALUES (id_model_nb, precio_nb, stock_nb);
+    VALUES (id_model_nb, price_nb, stock_nb);
 END $$
 
 CREATE PROCEDURE update_bike (IN id_bike_to_change INT, IN newPrice DECIMAL(10,2), IN newStock INT)
@@ -334,7 +343,7 @@ END $$
 
 CREATE PROCEDURE delete_bike (IN id_bike_to_delete INT)
 BEGIN
-    DELETE FROM bike 
+    DELETE FROM bikes
     WHERE id_bike = id_bike_to_delete;
 END $$
 
@@ -354,15 +363,13 @@ BEGIN
 END $$
 
 -- case 3
-CREATE PROCEDURE add_supplier(IN name_ns VARCHAR(50), IN id_contact_ns INT, IN phone_ns VARCHAR(15), IN phone_type_ns INT, IN email_ns VARCHAR(100), IN id_city_ns INT, OUT id_supplier_out VARCHAR(50) )
+CREATE PROCEDURE add_supplier(IN id_supplier_ns VARCHAR(50), IN name_ns VARCHAR(50), IN id_contact_ns VARCHAR(50), IN phone_ns VARCHAR(15), IN phone_type_ns INT, IN email_ns VARCHAR(100), IN id_city_ns INT)
 BEGIN
-    INSERT INTO suppliers(name, id_contact, email, id_city)
-    VALUES (name_ns, id_contact_ns, email_ns, id_city_ns);
-
-    SELECT LAST_INSERT_ID() INTO id_supplier_out;
+    INSERT INTO suppliers(id_supplier, name, id_contact, email, id_city)
+    VALUES (id_supplier_ns, name_ns, id_contact_ns, email_ns, id_city_ns);
 
     INSERT INTO suppliers_phone(phone_number, id_supplier, id_phone_type )
-    VALUES (phone_ns, LAST_INSERT_ID(), phone_type_ns );
+    VALUES (phone_ns, id_supplier_ns, phone_type_ns );
 END $$
 
 CREATE PROCEDURE add_spare(IN name_ns VARCHAR(50), IN description_ns VARCHAR(200), IN price_ns DECIMAL(10,2), IN stock_ns INT, IN id_supplier_ns VARCHAR(50), OUT id_spare_out INT )
@@ -374,9 +381,9 @@ BEGIN
     SELECT LAST_INSERT_ID() INTO id_spare_out;
 END $$
 
-CREATE PROCEDURE update_supplier(IN id_supplier_ns VARCHAR(50), IN name_ns VARCHAR(50), IN id_contact_ns INT, IN email_ns VARCHAR(100), IN id_city_ns INT)
+CREATE PROCEDURE update_supplier(IN id_supplier_ns VARCHAR(50), IN name_ns VARCHAR(50), IN id_contact_ns VARCHAR(50), IN email_ns VARCHAR(100), IN id_city_ns INT)
 BEGIN
-    UPDATE supplier
+    UPDATE suppliers
     SET name = name_ns, id_contact = id_contact_ns, email = email_ns, id_city = id_city_ns
     WHERE id_supplier = id_supplier_ns;
 END $$
@@ -385,7 +392,7 @@ CREATE PROCEDURE update_spare(IN id_spare_ns INT, IN name_ns VARCHAR(50), IN des
 BEGIN
     UPDATE spares
     SET name = name_ns, description = description_ns, price = price_ns, stock = stock_ns
-    WHERE id_supplier = id_spare_ns;
+    WHERE id_spare = id_spare_ns;
 END $$
 
 CREATE PROCEDURE delete_supplier (IN id_supplier_ns varchar(50))
@@ -416,12 +423,14 @@ BEGIN
     CREATE TEMPORARY TABLE temp_sale_details AS
     SELECT sd.id_sale_details,
            sd.id_sale,
-           b.name,
+           m.name,
            b.price,
            sd.quantity
     FROM sale_details AS sd
-    JOIN bike AS b USING(id_bike)
+    JOIN bikes AS b USING(id_bike)
     JOIN sales AS s USING(id_sale)
+    JOIN supplier_model AS sm USING(id_supplier_model)
+    JOIN models AS m USING(id_model)
     WHERE sd.id_sale = id_sale_ns
     AND s.id_customer = id_customer_ns
     ORDER BY sd.id_sale_details;
