@@ -1,7 +1,18 @@
 # Taller practico SQL2
 
-*Jhon Arley Roa*
+*Jhon Arley Roa* | 
 *Juan Diego Rojas*
+
+- [Diagrama ERD](#diagram-erd) 
+- [Casos de uso de inserciones](#caso-de-uso-1-gestion-de-inventario-de-bicicletas)
+- [Casos de uso de subconsultas](#casos-de-uso-con-subconsultas)
+- [Casos de uso de joins](#casos-de-uso-con-joins)
+- [Casos de uso con procedimientos almacenados](#casos-de-uso-para-implementar-procedimientos-almacenados)
+- [Casos de uso - funciones resumen](#casos-de-uso-para-funciones-de-resumen)
+
+# Diagram ERD
+
+![](./ERD.jpg)
 
 ## Caso de Uso 1: Gestion de inventario de bicicletas.
 
